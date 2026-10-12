@@ -11,7 +11,6 @@ import time
 from pathlib import Path
 
 import numpy as np
-from datasets import load_dataset
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score
@@ -76,6 +75,8 @@ def benchmark(predict_fn, texts, warmup=2):
 
 
 def main():
+    from datasets import load_dataset
+
     cfg = args_parser().parse_args()
     random.seed(cfg.seed)
     np.random.seed(cfg.seed)
