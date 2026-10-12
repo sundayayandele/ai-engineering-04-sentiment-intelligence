@@ -18,10 +18,11 @@ jobs:
       - name: Render editable Mermaid sources to SVG and PNG
         run: |
           npm install -g @mermaid-js/mermaid-cli
+          printf '%s\n' '{"args":["--no-sandbox","--disable-setuid-sandbox"]}' > /tmp/puppeteer-config.json
           for f in diagrams/source/*.mmd; do
             n="${f%.mmd}"
-            mmdc -i "$f" -o "$n.svg" -b white
-            mmdc -i "$f" -o "$n.png" -b white -s 2
+            mmdc -p /tmp/puppeteer-config.json -i "$f" -o "$n.svg" -b white
+            mmdc -p /tmp/puppeteer-config.json -i "$f" -o "$n.png" -b white -s 2
           done
       - name: Commit rendered diagrams
         run: |
