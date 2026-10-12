@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sentiment-intelligence"
+version = "0.1.0"
+description = "Educational and enterprise-reference sentiment intelligence"
+requires-python = ">=3.12"
+dependencies = ["fastapi>=0.115,<1", "uvicorn>=0.30,<1", "scikit-learn>=1.5,<2", "joblib>=1.4,<2", "pydantic>=2.8,<3", "prometheus-client>=0.20,<1", "numpy>=1.26,<3"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10", "httpx>=0.27,<1", "ruff>=0.7,<1"]
+transformers = ["torch>=2.4,<3", "transformers>=4.44,<5", "datasets>=3,<5"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
