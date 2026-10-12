@@ -122,8 +122,11 @@ def main():
     if not cfg.skip_transformer:
         import torch
         from transformers import (
-            AutoModelForSequenceClassification, AutoTokenizer,
-            DataCollatorWithPadding, Trainer, TrainingArguments,
+            AutoModelForSequenceClassification,
+            AutoTokenizer,
+            DataCollatorWithPadding,
+            Trainer,
+            TrainingArguments,
         )
 
         if cfg.device == "cuda" and not torch.cuda.is_available():
