@@ -20,12 +20,13 @@ Staging requires a saved checkpoint, reproducible metrics, all three classes pre
 After an experiment saves an artifact in `artifacts/tweet_eval_experiment/approved_model`:
 
 ```bash
+export TRANSFORMER_API_KEY=replace-with-random-secret-at-least-24-chars
 docker compose -f compose.transformer.yaml build
 docker compose -f compose.transformer.yaml up -d
 curl http://127.0.0.1:8001/health/ready
-curl -X POST http://127.0.0.1:8001/predict -H 'Content-Type: application/json' -d '{"text":"I enjoyed this service"}'
+curl -X POST http://127.0.0.1:8001/predict -H "X-API-Key: $TRANSFORMER_API_KEY" -H 'Content-Type: application/json' -d '{"text":"I enjoyed this service"}'
 ```
 
 On Podman Desktop use `podman build -f Dockerfile.transformer -t project04-transformer:cpu .` and `podman run` with localhost 8001, a read-only approved-model mount, 2 CPU and 4 GiB memory. On Rancher Desktop with moby, use the Docker Compose commands. Host sizing: 4+ logical CPUs, 16 GiB RAM preferred, 30+ GiB free disk. **No GPU required.**
 
-This service loads only local model files with safetensors and remote code disabled. It has no public authentication and is bound to localhost by Compose: **not a production deployment**.
+This service loads only local model files with safetensors and remote code disabled. It requires a strong API key, uses an in-memory per-client rate limiter and binds to localhost. For production, implement TLS termination, central authentication, distributed rate limiting and security validation.
