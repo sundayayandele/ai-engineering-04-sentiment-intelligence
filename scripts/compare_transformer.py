@@ -6,7 +6,6 @@ import json
 import os
 import platform
 import random
-import resource
 import statistics
 import time
 from pathlib import Path
@@ -194,8 +193,14 @@ def main():
             torch.cuda.empty_cache()
 
     # Linux ru_maxrss is KiB; on macOS it is bytes.
-    rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    results["process_peak_rss_bytes"] = int(rss * 1024 if platform.system() == "Linux" else rss)
+    try:
+        import resource
+        rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        results["process_peak_rss_bytes"] = int(
+            rss * 1024 if platform.system() == "Linux" else rss
+        )
+    except ImportError:
+        results["process_peak_rss_bytes"] = None
     target = output / "comparison.json"
     target.write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({
