@@ -1,0 +1,3 @@
+# Security
+
+Local demo has no authentication and must bind only to localhost. Production requires TLS, authn/authz, rate limits, redacted logging, approved data retention, signed model artifacts, audit and vulnerability scanning. joblib deserialization can execute malicious code: load only trusted artifacts. Sentiment can misclassify dialect, sarcasm and language; require human review for consequential decisions.
