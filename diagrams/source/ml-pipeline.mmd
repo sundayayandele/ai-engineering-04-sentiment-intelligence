@@ -1,0 +1,8 @@
+flowchart LR
+ DS[Licensed dataset or synthetic lab] --> CLEAN[Privacy and validation]
+ CLEAN --> SPLIT[Train and test split]
+ SPLIT --> BASE[TF-IDF baseline]
+ SPLIT -.-> TRANS[Transformer extension planned]
+ BASE --> EVAL[F1 and latency]
+ EVAL --> REG[Approved artifact]
+ REG --> SERVE[FastAPI]
