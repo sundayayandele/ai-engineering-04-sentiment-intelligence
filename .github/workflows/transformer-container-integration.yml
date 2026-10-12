@@ -25,6 +25,19 @@ jobs:
         run: docker compose -f compose.transformer.yaml build
         env:
           TRANSFORMER_API_KEY: ci-test-secret-at-least-24-characters
+      - name: Inspect exported artifact and container model access
+        env:
+          TRANSFORMER_API_KEY: ci-test-secret-at-least-24-characters
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('artifacts/tweet_eval_experiment/approved_model')
+          for name in ('config.json', 'model.safetensors', 'tokenizer_config.json'):
+              f = p / name
+              print(f'{name}: exists={f.is_file()} bytes={f.stat().st_size if f.is_file() else 0}')
+              assert f.is_file() and f.stat().st_size > 0
+          PY
+          docker compose -f compose.transformer.yaml run --rm --no-deps --entrypoint python transformer-api -c 'from pathlib import Path; p=Path("/app/model"); print({n: (p/n).is_file() for n in ("config.json", "model.safetensors", "tokenizer_config.json")}); assert all((p/n).is_file() for n in ("config.json", "model.safetensors", "tokenizer_config.json"))'
       - name: Start container and test readiness, auth, predictions, latency
         env:
           TRANSFORMER_API_KEY: ci-test-secret-at-least-24-characters
@@ -79,6 +92,12 @@ jobs:
               assert abs(sum(result["probabilities"].values()) - 1) < 0.001
           print(json.dumps({"ready": True, "auth_rejection": 401, "latency_ms": timings}))
           PY
+      - name: Model loader diagnostics on failure
+        if: failure()
+        env:
+          TRANSFORMER_API_KEY: ci-test-secret-at-least-24-characters
+        run: |
+          docker compose -f compose.transformer.yaml run --rm --no-deps --entrypoint python transformer-api -c 'import traceback; from sentiment_intelligence.transformer_service import TransformerService; TransformerService("/app/model"); print("model load OK")' || true
       - name: Container logs on failure
         if: failure()
         env:
