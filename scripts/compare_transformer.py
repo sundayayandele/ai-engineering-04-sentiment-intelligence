@@ -33,6 +33,7 @@ def args_parser():
     p.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
     p.add_argument("--output-dir", default="artifacts/tweet_eval_experiment")
     p.add_argument("--skip-transformer", action="store_true")
+    p.add_argument("--save-model", action="store_true", help="Export local safetensors model/tokenizer for staging")
     return p
 
 
@@ -192,6 +193,13 @@ def main():
             "peak_cuda_memory_bytes": int(torch.cuda.max_memory_allocated())
                 if device == "cuda" else None,
         }
+        if cfg.save_model:
+            model_path = output / "approved_model"
+            model_path.mkdir(parents=True, exist_ok=True)
+            model.save_pretrained(model_path, safe_serialization=True)
+            tokenizer.save_pretrained(model_path)
+            results["transformer"]["export_path"] = str(model_path)
+            results["transformer"]["promotion_status"] = "unapproved-staging-only"
         del trainer, model
         if device == "cuda":
             torch.cuda.empty_cache()
