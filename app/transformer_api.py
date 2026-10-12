@@ -1,6 +1,7 @@
 """Isolated CPU transformer inference API; requires an approved local model artifact."""
 from __future__ import annotations
 
+import logging
 import os
 import secrets
 import time
@@ -13,6 +14,8 @@ from fastapi import Request as HTTPRequest
 from pydantic import BaseModel, Field
 
 from sentiment_intelligence.transformer_service import TransformerService
+
+logger = logging.getLogger("transformer.readiness")
 
 app = FastAPI(title="Project 04 Transformer Staging API", version="0.2.0")
 
@@ -35,7 +38,8 @@ def live():
 def ready():
     try:
         service()
-    except (OSError, ValueError, RuntimeError) as exc:
+    except Exception as exc:
+        logger.error("Model readiness failure: exception_type=%s", type(exc).__name__)
         raise HTTPException(status_code=503, detail="Transformer artifact unavailable") from exc
     return {"status": "ready"}
 
