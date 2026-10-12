@@ -1,0 +1,6 @@
+flowchart LR
+ LOCAL[Docker Rancher Podman] --> API[FastAPI baseline]
+ GH[GitHub Actions] --> TEST[Lint test train build]
+ TEST --> API
+ API --> MODEL[(Read-only model)]
+ API -.-> K8S[Kubernetes OpenShift reference]
