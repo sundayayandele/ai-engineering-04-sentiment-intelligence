@@ -2,7 +2,7 @@
 
 **Project 04 of 20 Production AI Engineering Projects** · Python 3.12 · scikit-learn · FastAPI · optional Hugging Face/PyTorch · Docker/Podman/Kubernetes/OpenShift
 
-> **Status:** Educational CPU baseline and enterprise reference scaffold. Regular CI has passed previously; real-data transformer experiment results are pending. Synthetic training is not evidence of real sentiment accuracy; production deployment remains a reference.
+> **Status:** Educational CPU baseline and enterprise reference scaffold. CI and the real-data baseline experiment have passed; bounded DistilBERT verification is underway. Synthetic training is not evidence of real sentiment accuracy; production deployment remains a reference.
 
 ## Two tracks
 
@@ -93,12 +93,33 @@ podman logs project04-api
 
 **Full step-by-step learner lab:** [Docker Desktop, Rancher Desktop, Podman Desktop, Postman and GitHub runners](docs/learning/DESKTOP-CONTAINERS-AND-RUNNERS-LAB.md).
 
-## Real-data transformer milestone — TweetEval sentiment\n\nA **reproducible experiment** now compares a classical TF-IDF + Logistic Regression baseline against fine-tuned Hugging Face DistilBERT on the **same official TweetEval sentiment test subset**. TweetEval sentiment is CC BY 3.0 according to the dataset card (other TweetEval tasks have different licenses). The experiment outputs accuracy, macro-F1, per-class metrics, confusion matrices, latency and CPU/GPU resource observations. No real-data benchmark results are claimed until a run completes.\n\nInstall optional dependencies and run the baseline first:\n\n```bash\npython -m pip install -e ".[experiment]"\npython scripts/compare_transformer.py --train-samples 1200 --validation-samples 300 --test-samples 300 --skip-transformer\n```\n\nFine-tune DistilBERT on CPU (may be slow):\n\n```bash\npython scripts/compare_transformer.py --train-samples 1200 --validation-samples 300 --test-samples 300 --epochs 1 --batch-size 8 --device cpu\n```\n\nFor CUDA-compatible NVIDIA hardware, install the appropriate PyTorch CUDA wheel and select `--device cuda`. Alternatively use **Actions → transformer-experiment → Run workflow** and select `baseline` or `transformer` (capped sample sizes). Results are stored in `artifacts/tweet_eval_experiment/comparison.json` locally or as a workflow artifact.\n\n**Detailed experiment, dataset license, methodology and reproducibility:** [Transformer experiment guide](docs/mlops/TRANSFORMER-EXPERIMENT.md).\n\n## Enterprise architecture and visual artifacts
+## Real-data transformer milestone — TweetEval sentiment
+
+A **reproducible experiment** now compares a classical TF-IDF + Logistic Regression baseline against fine-tuned Hugging Face DistilBERT on the **same official TweetEval sentiment test subset**. TweetEval sentiment is CC BY 3.0 according to the dataset card (other TweetEval tasks have different licenses). The experiment outputs accuracy, macro-F1, per-class metrics, confusion matrices, latency and CPU/GPU resource observations. No real-data benchmark results are claimed until a run completes.
+
+Install optional dependencies and run the baseline first:
+
+```bash
+python -m pip install -e ".[experiment]"
+python scripts/compare_transformer.py --train-samples 1200 --validation-samples 300 --test-samples 300 --skip-transformer
+```
+
+Fine-tune DistilBERT on CPU (may be slow):
+
+```bash
+python scripts/compare_transformer.py --train-samples 1200 --validation-samples 300 --test-samples 300 --epochs 1 --batch-size 8 --device cpu
+```
+
+For CUDA-compatible NVIDIA hardware, install the appropriate PyTorch CUDA wheel and select `--device cuda`. Alternatively use **Actions → transformer-experiment → Run workflow** and select `baseline` or `transformer` (capped sample sizes). Results are stored in `artifacts/tweet_eval_experiment/comparison.json` locally or as a workflow artifact.
+
+**Detailed experiment, dataset license, methodology and reproducibility:** [Transformer experiment guide](docs/mlops/TRANSFORMER-EXPERIMENT.md).
+
+## Enterprise architecture and visual artifacts
 
 - [TOGAF 10](docs/architecture/TOGAF10-ARCHITECTURE.md)
 - [ArchiMate-inspired viewpoints](docs/architecture/ARCHIMATE-VIEWPOINTS.md)
 - [C4 architecture](docs/architecture/C4.md)
-- [Editable Mermaid architecture sources](diagrams/source/) (SVG/PNG rendering pending)
+- [Editable Mermaid architecture sources](diagrams/source/) (SVG and PNG renders committed)
 - [Infrastructure sizing](docs/infrastructure/CAPACITY-PLANNING.md)
 - [TCO comparison](docs/COST-TCO.md)
 - [Dataset licensing](docs/datasets/DATASETS.md)
