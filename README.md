@@ -116,6 +116,16 @@ podman logs project04-api
 
 Enterprise diagrams include conceptual services not yet implemented. Before production use, validate real-world accuracy, licensing, security, latency, calibration, bias, HA and monitoring.
 
+## Architectural Diagrams & Infographics
+![Architectural Diagrams & Infographics](/diagrams/01-platform-overview.png)
+
+
+![Architectural Diagrams & Infographics](/diagrams/02-enterprise-architecture.png)
+
+
+![Architectural Diagrams & Infographics](/diagrams/03-nlp-pipeline-and-deployment.png)
+
+
 ## License
 
 Project code intended for MIT; third-party dataset and pretrained model licenses remain separate.
