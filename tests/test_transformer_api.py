@@ -14,6 +14,7 @@ def test_live_and_not_ready(monkeypatch):
 
 
 def test_mocked_transformer_prediction(monkeypatch):
+    monkeypatch.setenv("TRANSFORMER_API_KEY", "test-key-at-least-24-characters-long")
     class Stub:
         def predict(self, text):
             return {"sentiment": "positive", "confidence": 0.9,
@@ -23,4 +24,21 @@ def test_mocked_transformer_prediction(monkeypatch):
     monkeypatch.setattr(module, "service", lambda: Stub())
     client = TestClient(module.app)
     assert client.get("/health/ready").status_code == 200
-    assert client.post("/predict", json={"text": "great"}).json()["sentiment"] == "positive"
+    assert client.post("/predict", json={"text": "great"}).status_code == 401
+    headers = {"X-API-Key": "test-key-at-least-24-characters-long"}
+    assert client.post("/predict", json={"text": "great"}, headers=headers).json()["sentiment"] == "positive"
+
+
+def test_rate_limit(monkeypatch):
+    monkeypatch.setenv("TRANSFORMER_API_KEY", "test-key-at-least-24-characters-long")
+    monkeypatch.setenv("TRANSFORMER_RPM_LIMIT", "1")
+    module._requests.clear()
+    class Stub:
+        def predict(self, text):
+            return {"sentiment": "neutral", "confidence": 1.0,
+                    "probabilities": {"neutral": 1.0}, "model_type": "test"}
+    monkeypatch.setattr(module, "service", lambda: Stub())
+    client = TestClient(module.app)
+    headers = {"X-API-Key": "test-key-at-least-24-characters-long"}
+    assert client.post("/predict", json={"text": "hello"}, headers=headers).status_code == 200
+    assert client.post("/predict", json={"text": "hello"}, headers=headers).status_code == 429
