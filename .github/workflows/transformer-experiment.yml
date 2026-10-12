@@ -1,0 +1,57 @@
+name: transformer-experiment
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "baseline or transformer (transformer is CPU-intensive)"
+        type: choice
+        options: [baseline, transformer]
+        default: baseline
+      train_samples:
+        description: "Train examples (max 1200 on hosted runner)"
+        default: "256"
+      test_samples:
+        description: "Test examples (max 300)"
+        default: "96"
+permissions:
+  contents: read
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate input bounds
+        env:
+          TRAIN_N: ${{ inputs.train_samples }}
+          TEST_N: ${{ inputs.test_samples }}
+        run: |
+          python - <<'PY'
+          import os
+          n = int(os.environ["TRAIN_N"])
+          t = int(os.environ["TEST_N"])
+          assert 32 <= n <= 1200
+          assert 32 <= t <= 300
+          PY
+      - name: Install experiment dependencies
+        run: python -m pip install -e ".[experiment]"
+      - name: Run comparable experiment
+        env:
+          MODE: ${{ inputs.mode }}
+          TRAIN_N: ${{ inputs.train_samples }}
+          TEST_N: ${{ inputs.test_samples }}
+          HF_HUB_DISABLE_TELEMETRY: "1"
+        run: |
+          if [ "$MODE" = "baseline" ]; then
+            python scripts/compare_transformer.py --train-samples "$TRAIN_N" --test-samples "$TEST_N" --validation-samples 64 --skip-transformer
+          else
+            python scripts/compare_transformer.py --train-samples "$TRAIN_N" --test-samples "$TEST_N" --validation-samples 64 --epochs 1 --batch-size 4 --max-length 96 --device cpu
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tweet-eval-comparison-${{ inputs.mode }}
+          path: artifacts/tweet_eval_experiment/comparison.json
+          retention-days: 14
