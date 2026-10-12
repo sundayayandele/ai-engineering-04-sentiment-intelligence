@@ -8,7 +8,8 @@ from collections import defaultdict, deque
 from functools import lru_cache
 from threading import Lock
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request as HTTPRequest
+from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Request as HTTPRequest
 from pydantic import BaseModel, Field
 
 from sentiment_intelligence.transformer_service import TransformerService
