@@ -1,0 +1,6 @@
+flowchart LR
+ REQ[Text JSON] --> VAL[Pydantic validation]
+ VAL --> LOAD[Model loader]
+ LOAD --> TF[TF-IDF]
+ TF --> LR[Logistic Regression]
+ LR --> RESP[Probabilities]
