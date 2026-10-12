@@ -1,0 +1,16 @@
+services:
+  api:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      MODEL_PATH: /app/artifacts/sentiment_baseline.joblib
+    volumes:
+      - ./artifacts:/app/artifacts:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 1g
+    cpus: 1.0
