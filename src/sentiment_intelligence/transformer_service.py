@@ -9,8 +9,8 @@ class TransformerService:
         self.model_dir = Path(model_dir)
         if not self.model_dir.is_dir():
             raise FileNotFoundError(f"Model directory missing: {self.model_dir}")
-        from transformers import AutoModelForSequenceClassification, AutoTokenizer
         import torch
+        from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
         self.torch = torch
         # Trust only locally curated artifacts. No model hub or arbitrary remote code.
