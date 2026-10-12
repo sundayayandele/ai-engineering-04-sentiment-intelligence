@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentiment-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sentiment-api
+  template:
+    metadata:
+      labels:
+        app: sentiment-api
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: api
+          image: REPLACE_WITH_APPROVED_REGISTRY/sentiment-intelligence:TAG
+          ports:
+            - containerPort: 8000
+          env:
+            - name: MODEL_PATH
+              value: /app/artifacts/sentiment_baseline.joblib
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: '1'
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8000
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8000
+          volumeMounts:
+            - name: model
+              mountPath: /app/artifacts
+              readOnly: true
+      volumes:
+        - name: model
+          persistentVolumeClaim:
+            claimName: sentiment-model-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentiment-api
+spec:
+  selector:
+    app: sentiment-api
+  ports:
+    - port: 80
+      targetPort: 8000
