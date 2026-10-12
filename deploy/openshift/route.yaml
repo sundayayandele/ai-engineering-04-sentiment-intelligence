@@ -1,0 +1,14 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: sentiment-api
+spec:
+  to:
+    kind: Service
+    name: sentiment-api
+  port:
+    targetPort: 80
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+# Production requires approved gateway authentication.
