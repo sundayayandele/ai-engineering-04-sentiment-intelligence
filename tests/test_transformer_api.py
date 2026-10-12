@@ -9,7 +9,7 @@ def test_live_and_not_ready(monkeypatch):
     client = TestClient(module.app)
     assert client.get("/health/live").status_code == 200
     assert client.get("/health/ready").status_code == 503
-    assert client.post("/predict", json={"text": ""}).status_code == 422
+    assert client.post("/predict", json={"text": ""}).status_code == 401
     module.service.cache_clear()
 
 
