@@ -6,13 +6,13 @@ from pathlib import Path
 
 class TransformerService:
     def __init__(self, model_dir: str | Path, max_length: int = 128):
+        self.model_dir = Path(model_dir)
+        if not self.model_dir.is_dir():
+            raise FileNotFoundError(f"Model directory missing: {self.model_dir}")
         from transformers import AutoModelForSequenceClassification, AutoTokenizer
         import torch
 
         self.torch = torch
-        self.model_dir = Path(model_dir)
-        if not self.model_dir.is_dir():
-            raise FileNotFoundError(f"Model directory missing: {self.model_dir}")
         # Trust only locally curated artifacts. No model hub or arbitrary remote code.
         self.tokenizer = AutoTokenizer.from_pretrained(
             str(self.model_dir), local_files_only=True, trust_remote_code=False
