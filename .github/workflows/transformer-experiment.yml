@@ -50,8 +50,8 @@ jobs:
       - name: Run comparable experiment
         env:
           MODE: ${{ inputs.mode || 'baseline' }}
-          TRAIN_N: ${{ inputs.train_samples }}
-          TEST_N: ${{ inputs.test_samples }}
+          TRAIN_N: ${{ inputs.train_samples || '256' }}
+          TEST_N: ${{ inputs.test_samples || '96' }}
           HF_HUB_DISABLE_TELEMETRY: "1"
         run: |
           if [ "$MODE" = "baseline" ]; then
