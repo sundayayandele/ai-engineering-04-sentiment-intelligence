@@ -2,7 +2,7 @@
 
 **Project 04 of 20 Production AI Engineering Projects** · Python 3.12 · scikit-learn · FastAPI · optional Hugging Face/PyTorch · Docker/Podman/Kubernetes/OpenShift
 
-> **Status:** Educational CPU baseline and enterprise reference scaffold. CI and the real-data baseline experiment have passed; bounded DistilBERT verification is underway. Synthetic training is not evidence of real sentiment accuracy; production deployment remains a reference.
+> **Status:** Educational CPU baseline and enterprise reference scaffold. CI and the real-data baseline experiment have passed; bounded DistilBERT CPU verification passed; see measured results below. Synthetic training is not evidence of real sentiment accuracy; production deployment remains a reference.
 
 ## Two tracks
 
@@ -95,7 +95,7 @@ podman logs project04-api
 
 ## Real-data transformer milestone — TweetEval sentiment
 
-A **reproducible experiment** now compares a classical TF-IDF + Logistic Regression baseline against fine-tuned Hugging Face DistilBERT on the **same official TweetEval sentiment test subset**. TweetEval sentiment is CC BY 3.0 according to the dataset card (other TweetEval tasks have different licenses). The experiment outputs accuracy, macro-F1, per-class metrics, confusion matrices, latency and CPU/GPU resource observations. No real-data benchmark results are claimed until a run completes.
+A **reproducible experiment** now compares a classical TF-IDF + Logistic Regression baseline against fine-tuned Hugging Face DistilBERT on the **same official TweetEval sentiment test subset**. TweetEval sentiment is CC BY 3.0 according to the dataset card (other TweetEval tasks have different licenses). The experiment outputs accuracy, macro-F1, per-class metrics, confusion matrices, latency and CPU/GPU resource observations. A bounded real-data CPU experiment completed successfully; its small-sample metrics are documented below and are not production-quality evidence.
 
 Install optional dependencies and run the baseline first:
 
@@ -111,6 +111,33 @@ python scripts/compare_transformer.py --train-samples 1200 --validation-samples 
 ```
 
 For CUDA-compatible NVIDIA hardware, install the appropriate PyTorch CUDA wheel and select `--device cuda`. Alternatively use **Actions → transformer-experiment → Run workflow** and select `baseline` or `transformer` (capped sample sizes). Results are stored in `artifacts/tweet_eval_experiment/comparison.json` locally or as a workflow artifact.
+
+### Verified experiment results — GitHub-hosted CPU runner
+
+**Run:** [transformer-experiment #38305611278](https://github.com/sundayayandele/ai-engineering-04-sentiment-intelligence/actions/runs/38305611278) (passed) · **commit:** `adca583b` · **source:** [original JSON artifact](https://github.com/sundayayandele/ai-engineering-04-sentiment-intelligence/actions/runs/38305611278/artifacts/11773086224).
+
+Both models were evaluated on the **same 96-example TweetEval sentiment test subset** after 256 training examples (64 validation), seed 42. DistilBERT was fine-tuned for **one epoch** on CPU, batch size 4, max token length 96.
+
+| Actual measured result | TF-IDF + Logistic Regression | DistilBERT (CPU) |
+|---|---:|---:|
+| Test accuracy | **42.71%** | 41.67% |
+| Test macro-F1 | **0.3089** | 0.1961 |
+| Training duration | **0.52 s** | 26.66 s |
+| Mean inference latency (50 requests) | **0.78 ms** | 34.49 ms |
+| p95 inference latency | **0.94 ms** | 43.87 ms |
+
+The experiment process reached **2.12 GiB peak RSS**; this is not an isolated memory measurement for either model. The baseline was **44.2× faster** in mean local inference latency. DistilBERT predicted **neutral for every test example**, and the baseline failed to predict any negative examples. **Neither model is production-ready.** This experiment verifies the fine-tuning/evaluation workflow, not generalization or deployment performance.
+
+### CPU versus GPU — measured versus estimated
+
+| Deployment | Actual measurement | Cost implication |
+|---|---|---|
+| CPU TF-IDF | 0.78 ms mean inference; 0.52 s training | Lower compute demand for this tiny benchmark |
+| CPU DistilBERT | 34.49 ms mean inference; 26.66 s training | Higher CPU cost per local inference if compute pricing is comparable |
+| GPU DistilBERT | **Not tested** | No measured GPU latency, runtime, VRAM or cost |
+| Cloud GPU vs CPU | **No vendor rate measured** | Price using region-specific VM hourly rates × measured runtime; include idle time and operations |
+
+A transparent training-compute comparison is `cost = hourly_instance_rate × training_seconds / 3600`. GPU break-even requires a **measured GPU training duration**; publishing a numerical GPU saving now would be speculative. See [verified metrics, confusion matrices, hardware caveats and TCO methodology](docs/mlops/VERIFIED-CPU-RESULTS.md) and [CPU/GPU TCO framework](docs/infrastructure/TRANSFORMER-CPU-GPU-TCO.md).
 
 **Detailed experiment, dataset license, methodology and reproducibility:** [Transformer experiment guide](docs/mlops/TRANSFORMER-EXPERIMENT.md).
 
