@@ -8,7 +8,7 @@ from collections import defaultdict, deque
 from functools import lru_cache
 from threading import Lock
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Request as HTTPRequest
 from pydantic import BaseModel, Field
 
 from sentiment_intelligence.transformer_service import TransformerService
@@ -43,7 +43,7 @@ _requests: dict[str, deque[float]] = defaultdict(deque)
 _lock = Lock()
 
 
-def authorize(request: Request, x_api_key: str | None = Header(default=None)):
+def authorize(request: HTTPRequest, x_api_key: str | None = Header(default=None)):
     """Fail closed; local deployment requires configured API key even for staging."""
     expected = os.getenv("TRANSFORMER_API_KEY", "")
     if len(expected) < 24 or not x_api_key or not secrets.compare_digest(x_api_key, expected):
