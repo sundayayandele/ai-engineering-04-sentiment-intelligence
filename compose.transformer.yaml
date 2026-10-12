@@ -7,6 +7,8 @@ services:
       - "127.0.0.1:8001:8000"
     environment:
       TRANSFORMER_MODEL_DIR: /app/model
+      TRANSFORMER_API_KEY: ${TRANSFORMER_API_KEY:?Set a strong TRANSFORMER_API_KEY (24+ characters)}
+      TRANSFORMER_RPM_LIMIT: "30"
       HF_HUB_OFFLINE: "1"
       TRANSFORMERS_OFFLINE: "1"
     volumes:
