@@ -141,6 +141,25 @@ A transparent training-compute comparison is `cost = hourly_instance_rate × tra
 
 **Detailed experiment, dataset license, methodology and reproducibility:** [Transformer experiment guide](docs/mlops/TRANSFORMER-EXPERIMENT.md).
 
+## Next milestone — model quality and CPU transformer staging
+
+**Implemented:** separate FastAPI transformer service, local-only `safetensors` loading, CPU Docker/Compose deployment, mock API tests and optional checkpoint export. **Not yet validated:** actual exported transformer checkpoint running end-to-end in a container; production model quality remains failed.
+
+Run a larger **CPU-only** experiment with a saved staging artifact (runtime and memory requirements depend on your host):
+
+```bash
+python -m pip install -e ".[experiment]"
+python scripts/compare_transformer.py --train-samples 1200 --validation-samples 300 --test-samples 300 --epochs 3 --batch-size 8 --device cpu --save-model
+docker compose -f compose.transformer.yaml build
+docker compose -f compose.transformer.yaml up -d
+curl http://127.0.0.1:8001/health/ready
+curl -X POST http://127.0.0.1:8001/predict -H 'Content-Type: application/json' -d '{"text":"I enjoyed this service"}'
+```
+
+The `approved_model` directory name is a **local mount convention only**: exporting a model does **not** confer production approval. The CPU staging container binds localhost port 8001; requires approximately 4 logical CPUs, 16 GiB RAM preferred and 30 GiB disk on the host. Docker Desktop and Rancher Desktop (moby) use the same Compose commands; Podman Desktop can build `Dockerfile.transformer` and run with a read-only artifact volume. No GPU purchase is required.
+
+See [quality improvement plan, reproducibility and promotion gates](docs/mlops/QUALITY-AND-PROMOTION-GATES.md). **Do not promote the previous collapsed-neutral DistilBERT checkpoint.**
+
 ## Enterprise architecture and visual artifacts
 
 - [TOGAF 10](docs/architecture/TOGAF10-ARCHITECTURE.md)
