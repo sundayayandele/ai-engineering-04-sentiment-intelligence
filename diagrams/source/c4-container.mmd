@@ -1,0 +1,5 @@
+flowchart LR
+ U[API client] --> API[FastAPI service]
+ TRAIN[Offline trainer] --> MODEL[(Trusted model artifact)]
+ MODEL --> API
+ API --> OUT[Sentiment JSON]
