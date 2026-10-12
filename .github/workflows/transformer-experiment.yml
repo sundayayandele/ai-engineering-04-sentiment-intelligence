@@ -1,5 +1,8 @@
 name: transformer-experiment
 on:
+  push:
+    paths:
+      - '.github/workflows/transformer-experiment.yml'
   workflow_dispatch:
     inputs:
       mode:
@@ -26,8 +29,8 @@ jobs:
           python-version: "3.12"
       - name: Validate input bounds
         env:
-          TRAIN_N: ${{ inputs.train_samples }}
-          TEST_N: ${{ inputs.test_samples }}
+          TRAIN_N: ${{ inputs.train_samples || '256' }}
+          TEST_N: ${{ inputs.test_samples || '96' }}
         run: |
           python - <<'PY'
           import os
@@ -37,10 +40,16 @@ jobs:
           assert 32 <= t <= 300
           PY
       - name: Install experiment dependencies
-        run: python -m pip install -e ".[experiment]"
+        run: |
+          python -m pip install -e ".[dev]"
+          if [ "${{ inputs.mode || 'baseline' }}" = "transformer" ]; then
+            python -m pip install -e ".[experiment]"
+          else
+            python -m pip install "datasets>=3,<5"
+          fi
       - name: Run comparable experiment
         env:
-          MODE: ${{ inputs.mode }}
+          MODE: ${{ inputs.mode || 'baseline' }}
           TRAIN_N: ${{ inputs.train_samples }}
           TEST_N: ${{ inputs.test_samples }}
           HF_HUB_DISABLE_TELEMETRY: "1"
@@ -52,6 +61,6 @@ jobs:
           fi
       - uses: actions/upload-artifact@v4
         with:
-          name: tweet-eval-comparison-${{ inputs.mode }}
+          name: tweet-eval-comparison-${{ inputs.mode || 'baseline' }}
           path: artifacts/tweet_eval_experiment/comparison.json
           retention-days: 14
