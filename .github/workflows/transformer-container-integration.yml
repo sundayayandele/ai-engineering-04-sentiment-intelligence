@@ -1,0 +1,91 @@
+name: transformer-container-integration
+on:
+  push:
+    paths:
+      - '.github/workflows/transformer-container-integration.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cpu-end-to-end:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install CPU training dependencies
+        run: python -m pip install -e ".[experiment]"
+      - name: Train and export real TweetEval model
+        run: |
+          python scripts/compare_transformer.py --train-samples 256 --validation-samples 64 --test-samples 96 --epochs 1 --batch-size 4 --device cpu --save-model
+          test -f artifacts/tweet_eval_experiment/approved_model/model.safetensors
+      - name: Build staging transformer container
+        run: docker compose -f compose.transformer.yaml build
+        env:
+          TRANSFORMER_API_KEY: ci-test-secret-at-least-24-characters
+      - name: Start container and test readiness, auth, predictions, latency
+        env:
+          TRANSFORMER_API_KEY: ci-test-secret-at-least-24-characters
+        run: |
+          set -euo pipefail
+          docker compose -f compose.transformer.yaml up -d
+          python - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.error
+          import urllib.request
+
+          url = "http://127.0.0.1:8001"
+          key = os.environ["TRANSFORMER_API_KEY"]
+          def req(path, body=None, authorized=False):
+              headers = {"Content-Type": "application/json"}
+              if authorized:
+                  headers["X-API-Key"] = key
+              request = urllib.request.Request(
+                  url + path, data=json.dumps(body).encode() if body is not None else None,
+                  headers=headers, method="POST" if body is not None else "GET"
+              )
+              try:
+                  with urllib.request.urlopen(request, timeout=20) as response:
+                      return response.status, json.load(response)
+              except urllib.error.HTTPError as exc:
+                  return exc.code, {}
+
+          deadline = time.monotonic() + 180
+          while time.monotonic() < deadline:
+              try:
+                  status, _ = req("/health/ready")
+                  if status == 200:
+                      break
+              except (OSError, ValueError):
+                  pass
+              time.sleep(3)
+          else:
+              raise AssertionError("Transformer container did not become ready")
+
+          assert req("/health/live")[0] == 200
+          assert req("/predict", {"text": "excellent"})[0] == 401
+          assert req("/predict", {"text": ""}, authorized=True)[0] == 422
+          timings = []
+          for text in ("I loved it", "This was awful", "It was okay"):
+              start = time.perf_counter()
+              status, result = req("/predict", {"text": text}, authorized=True)
+              timings.append(round((time.perf_counter()-start)*1000, 2))
+              assert status == 200, (status, result)
+              assert result["sentiment"] in ("negative", "neutral", "positive")
+              assert abs(sum(result["probabilities"].values()) - 1) < 0.001
+          print(json.dumps({"ready": True, "auth_rejection": 401, "latency_ms": timings}))
+          PY
+      - name: Container logs on failure
+        if: failure()
+        env:
+          TRANSFORMER_API_KEY: ci-test-secret-at-least-24-characters
+        run: docker compose -f compose.transformer.yaml logs --tail=100
+      - name: Clean up
+        if: always()
+        env:
+          TRANSFORMER_API_KEY: ci-test-secret-at-least-24-characters
+        run: docker compose -f compose.transformer.yaml down || true
