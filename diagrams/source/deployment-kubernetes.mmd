@@ -1,0 +1,7 @@
+flowchart TB
+ CLIENT[Client] --> GW[TLS gateway and auth]
+ GW --> SVC[Kubernetes Service]
+ SVC --> P1[API Pod A]
+ SVC --> P2[API Pod B]
+ PVC[(Approved model storage)] --> P1
+ PVC --> P2
