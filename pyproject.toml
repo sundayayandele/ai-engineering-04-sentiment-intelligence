@@ -11,7 +11,8 @@ dependencies = ["fastapi>=0.115,<1", "uvicorn>=0.30,<1", "scikit-learn>=1.5,<2",
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10", "httpx>=0.27,<1", "ruff>=0.7,<1"]
-transformers = ["torch>=2.4,<3", "transformers>=4.44,<5", "datasets>=3,<5"]
+transformers = ["torch>=2.4,<3", "transformers>=4.44,<5", "datasets>=3,<5", "accelerate>=1.0,<2"]
+experiment = ["torch>=2.4,<3", "transformers>=4.44,<5", "datasets>=3,<5", "accelerate>=1.0,<2"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
