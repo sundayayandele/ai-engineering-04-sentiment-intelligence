@@ -204,7 +204,7 @@ def main():
         validation_prediction = trainer.predict(valid_tokens)
         from sentiment_intelligence.calibration import calibration_report
         validation_calibration = calibration_report(
-            validation_prediction.predictions, labels_train=None, labels_true=valid["label"]
+            validation_prediction.predictions, labels_true=valid["label"]
         )
         prediction = trainer.predict(test_tokens)
         predictions = np.argmax(prediction.predictions, axis=1).tolist()
