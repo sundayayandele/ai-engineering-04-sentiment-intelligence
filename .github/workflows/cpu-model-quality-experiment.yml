@@ -1,0 +1,65 @@
+name: cpu-model-quality-experiment
+on:
+  push:
+    paths:
+      - '.github/workflows/cpu-model-quality-experiment.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  experiment:
+    name: cpu-seed-${{ matrix.seed }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: [42, 123, 2026]
+    env:
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      TOKENIZERS_PARALLELISM: "false"
+      OMP_NUM_THREADS: "2"
+      MKL_NUM_THREADS: "2"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install CPU experiment requirements
+        run: python -m pip install -e ".[experiment]"
+      - name: Train and evaluate class-stratified TweetEval
+        run: |
+          python scripts/compare_transformer.py \
+            --train-samples 1200 --validation-samples 300 --test-samples 300 \
+            --epochs 3 --batch-size 8 --max-length 96 --seed ${{ matrix.seed }} \
+            --device cpu --stratified \
+            --output-dir artifacts/quality-seed-${{ matrix.seed }}
+      - name: Apply experimental quality gate (non-promoting)
+        id: gate
+        continue-on-error: true
+        run: |
+          python scripts/model_quality_gate.py \
+            artifacts/quality-seed-${{ matrix.seed }}/comparison.json \
+            --output artifacts/quality-seed-${{ matrix.seed }}/quality-gate.json
+      - name: Write result summary
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path("artifacts/quality-seed-${{ matrix.seed }}")
+          if (p / "comparison.json").exists():
+              r = json.loads((p / "comparison.json").read_text())
+              with open(__import__("os").environ["GITHUB_STEP_SUMMARY"], "a") as out:
+                  out.write(f"### Seed ${{ matrix.seed }}\n")
+                  out.write(f"Baseline macro-F1: {r['baseline']['macro_f1']:.4f}\n\n")
+                  out.write(f"Transformer macro-F1: {r['transformer']['macro_f1']:.4f}\n\n")
+                  out.write(f"Gate result: ${{{{ steps.gate.outcome }}}}\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cpu-quality-seed-${{ matrix.seed }}
+          path: artifacts/quality-seed-${{ matrix.seed }}/*.json
+          if-no-files-found: warn
+          retention-days: 30
