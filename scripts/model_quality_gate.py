@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 
 
@@ -11,23 +12,36 @@ def assess(report: dict, *, min_macro_f1: float = 0.40) -> dict:
     model = report.get("transformer", {})
     baseline = report.get("baseline", {})
     failures = []
+    for name, metrics in (("transformer", model), ("baseline", baseline)):
+        score = metrics.get("macro_f1")
+        if not isinstance(score, (int, float)) or not math.isfinite(score) or not 0 <= score <= 1:
+            failures.append(f"invalid_{name}_macro_f1")
     if not model:
         failures.append("transformer_metrics_missing")
     else:
         matrix = model.get("confusion_matrix", [])
-        if len(matrix) != 3 or any(len(row) != 3 for row in matrix):
+        if (not isinstance(matrix, list) or len(matrix) != 3
+                or any(not isinstance(row, list) or len(row) != 3 for row in matrix)
+                or any(not isinstance(v, int) or isinstance(v, bool) or v < 0
+                       for row in matrix for v in row)):
             failures.append("invalid_confusion_matrix")
         else:
             predicted = [sum(matrix[i][j] for i in range(3)) for j in range(3)]
+            if sum(predicted) == 0:
+                failures.append("empty_confusion_matrix")
             if any(n == 0 for n in predicted):
                 failures.append("class_collapse")
-        if model.get("macro_f1", 0) < min_macro_f1:
+        if isinstance(model.get("macro_f1"), (int, float)) and math.isfinite(model["macro_f1"]) and model["macro_f1"] < min_macro_f1:
             failures.append("macro_f1_below_threshold")
         classification = model.get("classification", {})
         for label in labels:
             if classification.get(label, {}).get("recall", 0) <= 0:
                 failures.append(f"zero_recall_{label}")
-        if model.get("macro_f1", 0) < baseline.get("macro_f1", 0):
+        if (isinstance(model.get("macro_f1"), (int, float))
+                and isinstance(baseline.get("macro_f1"), (int, float))
+                and math.isfinite(model["macro_f1"])
+                and math.isfinite(baseline["macro_f1"])
+                and model["macro_f1"] < baseline["macro_f1"]):
             failures.append("worse_than_tfidf_baseline")
     return {
         "status": "pass" if not failures else "fail",
