@@ -23,14 +23,15 @@ MODEL_ID = "distilbert/distilbert-base-uncased"
 
 def args_parser():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--train-samples", type=int, default=1200)
-    p.add_argument("--validation-samples", type=int, default=300)
-    p.add_argument("--test-samples", type=int, default=300)
+    p.add_argument("--train-samples", type=int, default=1200, help="0 = full official split")
+    p.add_argument("--validation-samples", type=int, default=300, help="0 = full official split")
+    p.add_argument("--test-samples", type=int, default=300, help="0 = full official split")
     p.add_argument("--epochs", type=float, default=1)
     p.add_argument("--batch-size", type=int, default=8)
     p.add_argument("--max-length", type=int, default=128)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--stratified", action="store_true", help="Stratify each official split by label")
+    p.add_argument("--learning-rate", type=float, default=3e-5)
     p.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
     p.add_argument("--output-dir", default="artifacts/tweet_eval_experiment")
     p.add_argument("--skip-transformer", action="store_true")
@@ -39,8 +40,10 @@ def args_parser():
 
 
 def sample_split(ds, count: int, seed: int):
-    if count < 1:
-        raise ValueError("sample counts must be positive")
+    if count == 0:
+        return ds
+    if count < 0:
+        raise ValueError("sample counts must be nonnegative")
     count = min(count, len(ds))
     # Fixed seed and official split: no test leakage.
     return ds.shuffle(seed=seed).select(range(count))
@@ -48,6 +51,8 @@ def sample_split(ds, count: int, seed: int):
 
 def stratified_split(ds, count: int, seed: int):
     """Sample each class within the supplied official split, without cross-split leakage."""
+    if count == 0:
+        return ds
     if count < 3:
         raise ValueError("Stratified sample count must be at least 3")
     count = min(count, len(ds))
@@ -178,7 +183,7 @@ def main():
             num_train_epochs=cfg.epochs,
             per_device_train_batch_size=cfg.batch_size,
             per_device_eval_batch_size=cfg.batch_size,
-            learning_rate=3e-5,
+            learning_rate=cfg.learning_rate,
             weight_decay=0.01,
             save_strategy="no",
             report_to="none",
@@ -196,6 +201,11 @@ def main():
         start = time.perf_counter()
         trainer.train()
         train_seconds = time.perf_counter() - start
+        validation_prediction = trainer.predict(valid_tokens)
+        from sentiment_intelligence.calibration import calibration_report
+        validation_calibration = calibration_report(
+            validation_prediction.predictions, labels_train=None, labels_true=valid["label"]
+        )
         prediction = trainer.predict(test_tokens)
         predictions = np.argmax(prediction.predictions, axis=1).tolist()
         model.eval()
@@ -211,6 +221,8 @@ def main():
         results["transformer"] = {
             **metric_report(labels_test, predictions),
             "model": MODEL_ID,
+            "learning_rate": cfg.learning_rate,
+            "validation_calibration": validation_calibration,
             "device": device,
             "epochs": cfg.epochs,
             "batch_size": cfg.batch_size,
