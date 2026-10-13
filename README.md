@@ -1,5 +1,45 @@
 # Project 04 — Sentiment Intelligence
 
+## v2.0 modernization — active, staged delivery
+
+**Current release status: v2.0 in progress, not production approved.** The working baseline, CPU transformer integration, and 3-seed quality experiment remain intact. Version 2 work is incremental and CI-verified, not a claim that every enterprise capability below has been implemented.
+
+### Verified experimental evidence
+
+| Seed | TF-IDF macro-F1 | DistilBERT macro-F1 | Experimental gate |
+|---|---:|---:|---|
+| 42 | 0.4401 | 0.6464 | pass |
+| 123 | 0.4425 | 0.6676 | pass |
+| 2026 | 0.5271 | 0.6435 | pass |
+
+These results use **1,200 train / 300 validation / 300 test** sampled TweetEval examples per seed, 3 epochs and CPU only; they are not full official benchmark results. [Run and artifacts](https://github.com/sundayayandele/ai-engineering-04-sentiment-intelligence/actions/runs/38395772963).
+
+### New v2 controls
+
+- `scripts/model_quality_gate.py` rejects missing/nonfinite metrics, class collapse, zero recall and regressions versus TF-IDF; run with `python scripts/model_quality_gate.py artifacts/quality-seed-42/comparison.json`.
+- `scripts/model_release_manifest.py` generates SHA-256 hashes and file sizes for a **local** exported model; output remains explicitly staging-unapproved:
+
+```bash
+python scripts/model_release_manifest.py \
+  --model-dir artifacts/tweet_eval_experiment/approved_model \
+  --comparison artifacts/tweet_eval_experiment/comparison.json \
+  --output artifacts/tweet_eval_experiment/staging-manifest.json
+```
+
+- Automated tests cover malformed quality reports and missing model weights. **The manifest is provenance metadata, not a cryptographic signature or registry approval.**
+
+### v2 delivery roadmap
+
+1. **Quality and reproducibility:** complete full official-split benchmark, validation-only tuning, dataset/model revision pinning, calibration and slice-level error analysis.
+2. **Serving and security:** API versioning, structured audit-safe logs, OIDC/Keycloak, TLS and distributed quotas.
+3. **Cloud-native operations:** tested Kubernetes/OpenShift manifests, Helm, Terraform/OpenTofu, image/SBOM scans and Prometheus/OpenTelemetry.
+4. **Documentation and release:** C4/ArchiMate/TOGAF diagrams, runbooks, load/SLO evidence, signed model promotion and rollback rehearsals.
+
+**Hardware and desktop labs:** Preserve the detailed Docker Desktop, Podman Desktop and Rancher Desktop setup guides below. Baseline learning host: 2–4 logical CPUs, 8 GiB minimum RAM and 15–25 GiB free disk. Transformer CPU experimentation: 4+ CPUs, 16 GiB preferred host RAM, 30+ GiB free disk; allocate ~8 GiB to a desktop VM/container engine when training inside it. No GPU is required for this phase.
+
+---
+
+
 **Project 04 of 20 Production AI Engineering Projects** · Python 3.12 · scikit-learn · FastAPI · optional Hugging Face/PyTorch · Docker/Podman/Kubernetes/OpenShift
 
 > **Status:** Educational CPU baseline and enterprise reference scaffold. CI and the real-data baseline experiment have passed; bounded DistilBERT CPU verification passed; see measured results below. Synthetic training is not evidence of real sentiment accuracy; production deployment remains a reference.
