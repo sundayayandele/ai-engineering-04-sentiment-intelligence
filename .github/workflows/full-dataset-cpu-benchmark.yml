@@ -1,0 +1,53 @@
+name: full-dataset-cpu-benchmark
+on:
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: "Training seed"
+        type: choice
+        options: ["42", "123", "2026"]
+        default: "42"
+      epochs:
+        description: "Training epochs (full TweetEval may take hours on CPU)"
+        type: choice
+        options: ["1", "2", "3"]
+        default: "2"
+permissions:
+  contents: read
+jobs:
+  benchmark:
+    # Full CPU fine-tuning may exceed GitHub-hosted runner time; use a dedicated
+    # self-hosted runner with sufficient RAM/disk and explicitly opt in.
+    runs-on: [self-hosted, linux, x64, full-dataset-cpu]
+    timeout-minutes: 1440
+    env:
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      TOKENIZERS_PARALLELISM: "false"
+      OMP_NUM_THREADS: "4"
+      MKL_NUM_THREADS: "4"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install CPU training dependencies
+        run: python -m pip install -e ".[experiment]"
+      - name: Run full official TweetEval split comparison
+        run: |
+          python scripts/compare_transformer.py \
+            --train-samples 0 --validation-samples 0 --test-samples 0 \
+            --epochs ${{ inputs.epochs }} --batch-size 8 --max-length 96 \
+            --seed ${{ inputs.seed }} --learning-rate 3e-5 \
+            --device cpu --output-dir artifacts/full-seed-${{ inputs.seed }}
+      - name: Apply staging quality gate
+        run: |
+          python scripts/model_quality_gate.py \
+            artifacts/full-seed-${{ inputs.seed }}/comparison.json \
+            --output artifacts/full-seed-${{ inputs.seed }}/quality-gate.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: full-tweeteval-cpu-seed-${{ inputs.seed }}
+          path: artifacts/full-seed-${{ inputs.seed }}/*.json
+          retention-days: 30
+          if-no-files-found: warn
