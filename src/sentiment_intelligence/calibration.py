@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 
 
-def calibration_report(logits, labels_true, labels_train=None, bins: int = 10) -> dict:
+def calibration_report(logits, labels_true, bins: int = 10) -> dict:
     """Report uncalibrated confidence quality; no test-set parameter fitting."""
     if bins < 2:
         raise ValueError("bins must be >= 2")
