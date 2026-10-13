@@ -54,7 +54,7 @@ jobs:
                   out.write(f"### Seed ${{ matrix.seed }}\n")
                   out.write(f"Baseline macro-F1: {r['baseline']['macro_f1']:.4f}\n\n")
                   out.write(f"Transformer macro-F1: {r['transformer']['macro_f1']:.4f}\n\n")
-                  out.write(f"Gate result: ${{{{ steps.gate.outcome }}}}\n")
+                  out.write("Gate result: see quality-gate.json artifact\n")
           PY
       - uses: actions/upload-artifact@v4
         if: always()
