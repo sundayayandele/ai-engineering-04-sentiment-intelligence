@@ -21,6 +21,7 @@ jobs:
         run: |
           python scripts/compare_transformer.py --train-samples 256 --validation-samples 64 --test-samples 96 --epochs 1 --batch-size 4 --device cpu --save-model
           test -f artifacts/tweet_eval_experiment/approved_model/model.safetensors
+          chmod -R a+rX artifacts/tweet_eval_experiment/approved_model
       - name: Build staging transformer container
         run: docker compose -f compose.transformer.yaml build
         env:
@@ -37,7 +38,7 @@ jobs:
               print(f'{name}: exists={f.is_file()} bytes={f.stat().st_size if f.is_file() else 0}')
               assert f.is_file() and f.stat().st_size > 0
           PY
-          docker compose -f compose.transformer.yaml run --rm --no-deps --entrypoint python transformer-api -c 'from pathlib import Path; p=Path("/app/model"); print({n: (p/n).is_file() for n in ("config.json", "model.safetensors", "tokenizer_config.json")}); assert all((p/n).is_file() for n in ("config.json", "model.safetensors", "tokenizer_config.json"))'
+          docker compose -f compose.transformer.yaml run --rm --no-deps --entrypoint python transformer-api -c 'import os; from pathlib import Path; from safetensors import safe_open; p=Path("/app/model"); print("uid", os.getuid()); print({n: {"exists": (p/n).is_file(), "readable": os.access(p/n, os.R_OK), "bytes": (p/n).stat().st_size if (p/n).is_file() else 0} for n in ("config.json", "model.safetensors", "tokenizer_config.json")}); assert all((p/n).is_file() and os.access(p/n, os.R_OK) for n in ("config.json", "model.safetensors", "tokenizer_config.json")); print("weight_header", (p/"model.safetensors").open("rb").read(8).hex()); f=safe_open(str(p/"model.safetensors"), framework="pt"); print("tensors", len(f.keys()))'
       - name: Start container and test readiness, auth, predictions, latency
         env:
           TRANSFORMER_API_KEY: ci-test-secret-at-least-24-characters
@@ -97,7 +98,7 @@ jobs:
         env:
           TRANSFORMER_API_KEY: ci-test-secret-at-least-24-characters
         run: |
-          docker compose -f compose.transformer.yaml run --rm --no-deps --entrypoint python transformer-api -c 'import traceback; from sentiment_intelligence.transformer_service import TransformerService; TransformerService("/app/model"); print("model load OK")' || true
+          docker compose -f compose.transformer.yaml run --rm --no-deps --entrypoint python transformer-api -c 'from pathlib import Path; import os; p=Path("/app/model/model.safetensors"); print("weights_exists",p.exists(),"readable",os.access(p,os.R_OK)); from sentiment_intelligence.transformer_service import TransformerService; TransformerService("/app/model"); print("model load OK")' || true
       - name: Container logs on failure
         if: failure()
         env:
