@@ -30,6 +30,7 @@ def args_parser():
     p.add_argument("--batch-size", type=int, default=8)
     p.add_argument("--max-length", type=int, default=128)
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument("--stratified", action="store_true", help="Stratify each official split by label")
     p.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
     p.add_argument("--output-dir", default="artifacts/tweet_eval_experiment")
     p.add_argument("--skip-transformer", action="store_true")
@@ -43,6 +44,30 @@ def sample_split(ds, count: int, seed: int):
     count = min(count, len(ds))
     # Fixed seed and official split: no test leakage.
     return ds.shuffle(seed=seed).select(range(count))
+
+
+def stratified_split(ds, count: int, seed: int):
+    """Sample each class within the supplied official split, without cross-split leakage."""
+    if count < 3:
+        raise ValueError("Stratified sample count must be at least 3")
+    count = min(count, len(ds))
+    labels = sorted(set(ds["label"]))
+    if count < len(labels):
+        raise ValueError("Sample too small to cover every label")
+    shuffled = ds.shuffle(seed=seed)
+    groups = {label: [] for label in labels}
+    for i, label in enumerate(shuffled["label"]):
+        groups[label].append(i)
+    # Allocate roughly equal class quotas, redistributing exhausted capacity.
+    quotas = {label: 0 for label in labels}
+    while sum(quotas.values()) < count:
+        candidates = [label for label in labels if quotas[label] < len(groups[label])]
+        if not candidates:
+            break
+        chosen = min(candidates, key=lambda label: (quotas[label], label))
+        quotas[chosen] += 1
+    indices = [i for label in labels for i in groups[label][:quotas[label]]]
+    return shuffled.select(indices).shuffle(seed=seed)
 
 
 def metric_report(y_true, y_pred):
@@ -88,9 +113,10 @@ def main():
     # TweetEval sentiment subset: CC BY 3.0 according to the dataset card.
     # Keep the official train, validation and test partitions separate.
     ds = load_dataset(DATASET_ID, "sentiment")
-    train = sample_split(ds["train"], cfg.train_samples, cfg.seed)
-    valid = sample_split(ds["validation"], cfg.validation_samples, cfg.seed)
-    test = sample_split(ds["test"], cfg.test_samples, cfg.seed)
+    sampler = stratified_split if cfg.stratified else sample_split
+    train = sampler(ds["train"], cfg.train_samples, cfg.seed)
+    valid = sampler(ds["validation"], cfg.validation_samples, cfg.seed)
+    test = sampler(ds["test"], cfg.test_samples, cfg.seed)
     texts_train, labels_train = train["text"], train["label"]
     texts_test, labels_test = test["text"], test["label"]
 
@@ -109,6 +135,7 @@ def main():
         "dataset_url": "https://huggingface.co/datasets/cardiffnlp/tweet_eval",
         "labels": LABELS,
         "seed": cfg.seed,
+        "stratified": cfg.stratified,
         "train_samples": len(train),
         "validation_samples": len(valid),
         "test_samples": len(test),
