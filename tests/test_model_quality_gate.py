@@ -36,3 +36,25 @@ def test_gate_rejects_low_quality_and_regression():
 
 def test_gate_rejects_missing_model():
     assert "transformer_metrics_missing" in assess({"baseline": {}})["failures"]
+
+
+def test_gate_rejects_missing_baseline():
+    assert "invalid_baseline_macro_f1" in assess({"transformer": report()["transformer"]})["failures"]
+
+
+def test_gate_rejects_nan_scores():
+    data = report()
+    data["transformer"]["macro_f1"] = float("nan")
+    assert "invalid_transformer_macro_f1" in assess(data)["failures"]
+
+
+def test_gate_rejects_empty_confusion_matrix():
+    data = report()
+    data["transformer"]["confusion_matrix"] = [[0, 0, 0] for _ in range(3)]
+    assert "empty_confusion_matrix" in assess(data)["failures"]
+
+
+def test_gate_rejects_negative_confusion_counts():
+    data = report()
+    data["transformer"]["confusion_matrix"][0][0] = -1
+    assert "invalid_confusion_matrix" in assess(data)["failures"]
